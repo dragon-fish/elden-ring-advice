@@ -5,7 +5,7 @@ import MessageBuilder from './components/MessageBuilder.vue'
 <template>
   <div class="app-container">
     <header>
-      <h1>艾尔登法环 谏言模拟器</h1>
+      <h1>艾尔登法环 谏言生成器</h1>
       <div class="divider"></div>
     </header>
 
