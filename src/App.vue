@@ -15,6 +15,9 @@ import MessageBuilder from './components/MessageBuilder.vue'
 
     <footer>
       <p>May grace guide thee.</p>
+      <p class="github-link">
+        <a href="https://github.com/dragon-fish/elden-ring-messages" target="_blank">GitHub</a>
+      </p>
     </footer>
   </div>
 </template>
@@ -88,5 +91,20 @@ footer {
   color: #555;
   font-style: italic;
   font-size: 0.9rem;
+}
+
+.github-link {
+  margin-top: 0.5rem;
+}
+
+.github-link a {
+  color: #555;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.github-link a:hover {
+  color: var(--er-gold);
+  text-decoration: underline;
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { toPng } from 'html-to-image'
 import { loadLexicon, type LexiconData } from '../utils/lexicon'
 import { useMessageStore, type HistoryItem } from '../stores/message'
 import MessageLine from './MessageLine.vue'
@@ -10,6 +11,8 @@ const { mode, line1, line2, currentMessageText, history } = storeToRefs(store)
 
 const lexicon = ref<LexiconData | null>(null)
 const loading = ref(true)
+const previewFrameRef = ref<HTMLElement | null>(null)
+const savingImage = ref(false)
 
 onMounted(async () => {
   try {
@@ -52,6 +55,42 @@ function shareItem(item: HistoryItem) {
   alert('分享链接已复制到剪贴板！')
 }
 
+// Generate a stable pseudo-random rating count based on the message text
+const ratingCount = computed(() => {
+  const text = currentMessageText.value
+  if (!text) return 0
+  let hash = 0
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash << 5) - hash + text.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash % 9000) + 1000
+})
+
+async function saveImage() {
+  const frame = previewFrameRef.value
+  if (!frame) return
+
+  savingImage.value = true
+  try {
+    // toPng uses SVG foreignObject which natively supports CSS mask-image,
+    // so the left/right edge fade is preserved as alpha transparency.
+    const dataUrl = await toPng(frame, { pixelRatio: 2 })
+
+    const link = document.createElement('a')
+    link.download = `elden-ring-message-${Date.now()}.png`
+    link.href = dataUrl
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (e) {
+    console.error('Failed to save image', e)
+    alert('保存图片失败')
+  } finally {
+    savingImage.value = false
+  }
+}
+
 function formatDate(ts: number) {
   return new Date(ts).toLocaleString('zh-CN')
 }
@@ -74,12 +113,55 @@ function formatDate(ts: number) {
       </div>
 
       <div class="preview-section">
-        <div class="preview-box">
-          {{ currentMessageText }}
+        <div class="preview-frame" ref="previewFrameRef">
+          <div class="preview-content">
+            <div class="preview-text">{{ currentMessageText }}</div>
+            <div class="preview-rating">总评价数&emsp;{{ ratingCount }}</div>
+          </div>
+          <div class="preview-bar">
+            <span class="bar-action">
+              <span class="ctrl-btn ctrl-y">Y</span>
+              <span>:关闭</span>
+            </span>
+            <span class="bar-action">
+              <span class="ctrl-btn ctrl-back">
+                <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor">
+                  <rect
+                    x="1"
+                    y="3"
+                    width="8"
+                    height="6"
+                    rx="1"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                  <rect
+                    x="6"
+                    y="7"
+                    width="8"
+                    height="6"
+                    rx="1"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                </svg>
+              </span>
+              <span>:好评</span>
+            </span>
+            <span class="bar-action">
+              <span class="ctrl-btn ctrl-menu">≡</span>
+              <span>:恶评</span>
+            </span>
+          </div>
         </div>
         <div class="action-buttons">
           <button class="action-btn" @click="handleGenerate">生成谏言</button>
           <button class="action-btn secondary" @click="handleRandomize">随机谏言</button>
+          <button class="action-btn secondary" @click="saveImage" :disabled="savingImage">
+            {{ savingImage ? '保存中...' : '保存图片' }}
+          </button>
         </div>
       </div>
 
@@ -176,8 +258,8 @@ function formatDate(ts: number) {
   margin-top: 2rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+  align-items: stretch;
+  gap: 1.5rem;
 }
 
 .action-buttons {
@@ -186,17 +268,100 @@ function formatDate(ts: number) {
   justify-content: center;
 }
 
-.preview-box {
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid #5a5a5a;
-  padding: 2rem;
-  min-width: 300px;
+/* Elden Ring style message frame */
+.preview-frame {
+  width: 100%;
+  /* Left/right edges fade to transparent, starting very close to the edge */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 4%,
+    black 96%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%);
+  border-top: 2px solid rgba(110, 100, 78, 0.45);
+  border-bottom: 2px solid rgba(110, 100, 78, 0.45);
+}
+
+.preview-content {
+  background: linear-gradient(
+    180deg,
+    rgba(38, 35, 30, 0.92) 0%,
+    rgba(22, 20, 17, 0.96) 60%,
+    rgba(18, 16, 13, 0.98) 100%
+  );
+  border-bottom: 1px solid rgba(90, 82, 64, 0.3);
+  padding: 2.5rem 4rem 1.2rem;
+  position: relative;
+}
+
+.preview-text {
   text-align: center;
+  color: #dcd6c8;
+  font-family: 'Source Han Serif CN VF', 'Songti SC', serif;
+  font-size: 1.25rem;
+  line-height: 2.2;
   white-space: pre-wrap;
-  font-size: 1.2rem;
-  line-height: 1.6;
-  color: #fff;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.08em;
+}
+
+.preview-rating {
+  text-align: right;
+  color: #a09880;
+  font-family: 'Source Han Serif CN VF', 'Songti SC', serif;
+  font-size: 0.95rem;
+  margin-top: 0.8rem;
+  padding-right: 0.5rem;
+}
+
+.preview-bar {
+  background: rgba(16, 14, 11, 0.95);
+  border-top: 1px solid rgba(80, 72, 56, 0.35);
+  padding: 0.65rem 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.bar-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: #b0a890;
+  font-family: 'Source Han Serif CN VF', 'Songti SC', serif;
+  font-size: 0.95rem;
+}
+
+.ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1.5px solid;
+  font-size: 0.72rem;
+  font-weight: bold;
+  font-family: Arial, Helvetica, sans-serif;
+  flex-shrink: 0;
+}
+
+.ctrl-y {
+  border-color: #c0a030;
+  color: #c0a030;
+}
+
+.ctrl-back {
+  border-color: #b0a890;
+  color: #b0a890;
+}
+
+.ctrl-menu {
+  border-color: #b0a890;
+  color: #b0a890;
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .action-btn {
