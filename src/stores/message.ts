@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { Category, LexiconData } from '../utils/lexicon'
+import type { LexiconData } from '../utils/lexicon'
 
 export interface MessageSegment {
   template: string
-  wordCategory: Category | ''
+  wordCategory: string
   word: string
 }
 
@@ -106,7 +106,7 @@ export const useMessageStore = defineStore('message', () => {
 
     const templates = lexicon.templates
     const conjunctions = lexicon.conjunctions
-    const categories = Object.keys(lexicon.words) as Category[]
+    const categories = Object.keys(lexicon.words)
 
     const hasTemplates = isNonEmptyArray(templates)
     const hasConjunctions = isNonEmptyArray(conjunctions)
@@ -114,12 +114,12 @@ export const useMessageStore = defineStore('message', () => {
 
     const createRandomSegment = (): MessageSegment => {
       const template = hasTemplates ? randomItem(templates) : ''
-      let wordCategory: Category | '' = ''
+      let wordCategory = ''
       let word = ''
 
       if (template.includes('*****') && hasCategories) {
         wordCategory = randomItem(categories)
-        const wordList = lexicon.words[wordCategory]
+        const wordList = lexicon.words[wordCategory] ?? []
         if (isNonEmptyArray(wordList)) {
           word = randomItem(wordList)
         }
@@ -128,8 +128,15 @@ export const useMessageStore = defineStore('message', () => {
       return { template, wordCategory, word }
     }
 
-    // Randomize Mode
-    mode.value = Math.random() > 0.5 ? 'single' : 'double'
+    // Randomize Mode based on allowedModes
+    const { allowedModes } = lexicon
+    if (allowedModes.includes(1) && allowedModes.includes(2)) {
+      mode.value = Math.random() > 0.5 ? 'single' : 'double'
+    } else if (allowedModes.includes(2)) {
+      mode.value = 'double'
+    } else {
+      mode.value = 'single'
+    }
 
     // Line 1
     const l1Seg1 = createRandomSegment()
@@ -249,7 +256,7 @@ export const useMessageStore = defineStore('message', () => {
 
       let res = `t:${tIdx}`
       if (seg.wordCategory && seg.word) {
-        const wIdx = getIdx(lexicon.words[seg.wordCategory], seg.word)
+        const wIdx = getIdx(lexicon.words[seg.wordCategory] ?? [], seg.word)
         if (wIdx !== -1) {
           res += `|c:${seg.wordCategory}|w:${wIdx}`
         }
@@ -258,6 +265,11 @@ export const useMessageStore = defineStore('message', () => {
     }
 
     const params = new URLSearchParams()
+
+    // Lexicon ID (only if non-default)
+    if (lexicon.id !== 'elden-ring') {
+      params.set('p', lexicon.id)
+    }
 
     // Mode
     if (state.mode === 'double') {
@@ -328,7 +340,7 @@ export const useMessageStore = defineStore('message', () => {
             if (k === 'j') conj = lexicon.conjunctions[Number(v)] || ''
             else if (k === 'sj') startConj = lexicon.conjunctions[Number(v)] || ''
             else if (k === 't') seg.template = lexicon.templates[Number(v)] || ''
-            else if (k === 'c') seg.wordCategory = v as Category
+            else if (k === 'c') seg.wordCategory = v || ''
           }
 
           if (seg.wordCategory) {

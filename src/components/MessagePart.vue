@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { type Category, CATEGORIES, type LexiconData } from '../utils/lexicon'
+import { type LexiconData } from '../utils/lexicon'
 
 const props = defineProps<{
   lexicon: LexiconData
   modelValue: {
     template: string
-    wordCategory: Category | ''
+    wordCategory: string
     word: string
   }
 }>()
@@ -24,8 +24,8 @@ const hasPlaceholder = computed(() => {
 })
 
 const categories = computed(() => {
-  return Object.entries(CATEGORIES).map(([key, label]) => ({
-    key: key as Category,
+  return Object.entries(props.lexicon.categories).map(([key, label]) => ({
+    key,
     label,
   }))
 })
@@ -47,8 +47,9 @@ function updateTemplate(event: Event) {
     newWord = ''
   } else if (!newCategory) {
     // Default to first category if none selected
-    newCategory = 'enemies'
-    newWord = props.lexicon.words['enemies']?.[0] || ''
+    const firstCategoryId = Object.keys(props.lexicon.categories)[0] || ''
+    newCategory = firstCategoryId
+    newWord = firstCategoryId ? (props.lexicon.words[firstCategoryId]?.[0] || '') : ''
   }
 
   emit('update:modelValue', {
@@ -59,7 +60,7 @@ function updateTemplate(event: Event) {
 }
 
 function updateCategory(event: Event) {
-  const val = (event.target as HTMLSelectElement).value as Category
+  const val = (event.target as HTMLSelectElement).value
   // Reset word when category changes
   const newWord = props.lexicon.words[val]?.[0] || ''
 

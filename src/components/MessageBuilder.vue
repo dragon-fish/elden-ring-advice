@@ -16,7 +16,11 @@ const savingImage = ref(false)
 
 onMounted(async () => {
   try {
-    lexicon.value = await loadLexicon()
+    // Determine which lexicon to load from URL
+    const params = new URLSearchParams(window.location.search)
+    const lexiconId = params.get('p') || 'elden-ring'
+
+    lexicon.value = await loadLexicon(lexiconId)
 
     // Initialize store from URL or LocalStorage
     store.loadFromUrl(lexicon.value)
@@ -102,8 +106,8 @@ function formatDate(ts: number) {
 
     <div v-else-if="lexicon" class="builder-content">
       <div class="mode-switch">
-        <button :class="{ active: mode === 'single' }" @click="mode = 'single'">单行谏言</button>
-        <button :class="{ active: mode === 'double' }" @click="mode = 'double'">双行谏言</button>
+        <button v-if="lexicon.allowedModes.includes(1)" :class="{ active: mode === 'single' }" @click="mode = 'single'">单行谏言</button>
+        <button v-if="lexicon.allowedModes.includes(2)" :class="{ active: mode === 'double' }" @click="mode = 'double'">双行谏言</button>
       </div>
 
       <MessageLine :lexicon="lexicon" v-model="line1" />
