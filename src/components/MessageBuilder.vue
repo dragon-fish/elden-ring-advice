@@ -157,10 +157,10 @@ function formatDate(ts: number) {
           </div>
         </div>
         <div class="action-buttons">
-          <button class="action-btn" @click="handleGenerate">生成谏言</button>
+          <button class="action-btn" @click="handleGenerate">保留谏言</button>
           <button class="action-btn secondary" @click="handleRandomize">随机谏言</button>
           <button class="action-btn secondary" @click="saveImage" :disabled="savingImage">
-            {{ savingImage ? '保存中...' : '保存图片' }}
+            {{ savingImage ? '转换中…' : '下载图片' }}
           </button>
         </div>
       </div>

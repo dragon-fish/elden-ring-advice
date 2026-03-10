@@ -96,18 +96,33 @@ export const useMessageStore = defineStore('message', () => {
     return seg.template
   }
 
+  const isNonEmptyArray = <T>(arr: readonly T[]): arr is readonly [T, ...T[]] => arr.length > 0
+  const randomItem = <T>(arr: readonly [T, ...T[]]): T => {
+    return arr[Math.floor(Math.random() * arr.length)]!
+  }
+
   function randomize(lexicon: LexiconData) {
-    const randomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
+    const createEmptySegment = (): MessageSegment => ({ template: '', wordCategory: '', word: '' })
+
+    const templates = lexicon.templates
+    const conjunctions = lexicon.conjunctions
     const categories = Object.keys(lexicon.words) as Category[]
 
+    const hasTemplates = isNonEmptyArray(templates)
+    const hasConjunctions = isNonEmptyArray(conjunctions)
+    const hasCategories = isNonEmptyArray(categories)
+
     const createRandomSegment = (): MessageSegment => {
-      const template = randomItem(lexicon.templates)
+      const template = hasTemplates ? randomItem(templates) : ''
       let wordCategory: Category | '' = ''
       let word = ''
 
-      if (template.includes('*****')) {
+      if (template.includes('*****') && hasCategories) {
         wordCategory = randomItem(categories)
-        word = randomItem(lexicon.words[wordCategory])
+        const wordList = lexicon.words[wordCategory]
+        if (isNonEmptyArray(wordList)) {
+          word = randomItem(wordList)
+        }
       }
 
       return { template, wordCategory, word }
@@ -119,8 +134,8 @@ export const useMessageStore = defineStore('message', () => {
     // Line 1
     const l1Seg1 = createRandomSegment()
     const l1HasSeg2 = Math.random() > 0.5
-    const l1Conj = l1HasSeg2 ? randomItem(lexicon.conjunctions) : ''
-    const l1Seg2 = l1HasSeg2 ? createRandomSegment() : { template: '', wordCategory: '', word: '' }
+    const l1Conj = l1HasSeg2 && hasConjunctions ? randomItem(conjunctions) : ''
+    const l1Seg2: MessageSegment = l1HasSeg2 ? createRandomSegment() : createEmptySegment()
 
     line1.value = {
       segment1: l1Seg1,
@@ -129,11 +144,11 @@ export const useMessageStore = defineStore('message', () => {
     }
 
     // Line 2
-    const l2StartConj = Math.random() > 0.5 ? randomItem(lexicon.conjunctions) : ''
+    const l2StartConj = Math.random() > 0.5 && hasConjunctions ? randomItem(conjunctions) : ''
     const l2Seg1 = createRandomSegment()
     const l2HasSeg2 = Math.random() > 0.5
-    const l2Conj = l2HasSeg2 ? randomItem(lexicon.conjunctions) : ''
-    const l2Seg2 = l2HasSeg2 ? createRandomSegment() : { template: '', wordCategory: '', word: '' }
+    const l2Conj = l2HasSeg2 && hasConjunctions ? randomItem(conjunctions) : ''
+    const l2Seg2: MessageSegment = l2HasSeg2 ? createRandomSegment() : createEmptySegment()
 
     line2.value = {
       startConjunction: l2StartConj,

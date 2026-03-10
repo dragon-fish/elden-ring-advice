@@ -42,8 +42,9 @@ function toggleSecondSegment() {
     newLine.conjunction = stashedConjunction.value || props.lexicon.conjunctions[0] || ''
 
     // Initialize segment2 only if it's empty (never used or cleared in old version)
-    if (!newLine.segment2.template && props.lexicon.templates.length > 0) {
-      newLine.segment2 = { template: props.lexicon.templates[0], wordCategory: '', word: '' }
+    const firstTemplate = props.lexicon.templates[0]
+    if (!newLine.segment2.template && firstTemplate !== undefined) {
+      newLine.segment2 = { template: firstTemplate, wordCategory: '', word: '' }
     }
     emit('update:modelValue', newLine)
   }
